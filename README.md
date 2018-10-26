@@ -1,2 +1,2 @@
-# SQL-Coding-Projects
-More advanced SQL projects
+# SQL Coding Projects
+This repository contains more advanced basic SQL projects.

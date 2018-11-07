@@ -1,5 +1,7 @@
 CREATE DATABASE db_library
 
+USE db_library
+
 --CREATING TABLES
 CREATE TABLE library_branch (
 	BranchID INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
@@ -18,7 +20,7 @@ SELECT * FROM publisher;
 
 
 CREATE TABLE books (
-	BooksID INT PRIMARY KEY NOT NULL,
+	BooksID INT PRIMARY KEY IDENTITY(100,1) NOT NULL,
 	Title VARCHAR(50) NOT NULL,
 	PublisherName VARCHAR(30) FOREIGN KEY REFERENCES publisher(PublisherName)
 )
@@ -27,7 +29,7 @@ SELECT * FROM books;
 
 CREATE TABLE book_authors(
 	BooksID INT FOREIGN KEY REFERENCES books(BooksID),
-	AuthorName VARCHAR(30) NOT NULL
+	AuthorName VARCHAR(70) NOT NULL
 )
 SELECT * FROM book_authors;
 
@@ -61,8 +63,9 @@ SELECT * FROM book_loans;
 --INSERTING DATA
 INSERT INTO library_branch (BranchName, Address)
 VALUES
-	('Sharpstown', '123 Main St., Hollywood, CA'),
-	('Central', '246 Central St., Portland, CA'),
+	--Required 4 branches
+	('Sharpstown', '123 Main St., Hollywood, CA'), --Required Sharpstown branch
+	('Central', '246 Central St., Portland, CA'), --Required Central branch
 	('Baker', '135 Odd St., NYC, NY'),
 	('Dulles', '124 Park Ave., London, England')
 ;
@@ -79,28 +82,64 @@ VALUES
 SELECT * FROM publisher;
 
 
-INSERT INTO books (BooksID, Title, PublisherName)
+INSERT INTO books (Title, PublisherName)
 VALUES
-	(100, 'Fifty Shades of Grey', 'HarperCollins'),
-	(101, 'The Hunger Games', 'Penguin'),
-	(102, 'Gone Girl', 'New Era'),
-	(103, 'The Fault in Our Stars', 'Simon & Schuster'),
-	(104, 'Divergent', 'HarperCollins'),
-	(105, 'Harry Potter', 'Penguin'),
-	(106, 'A Game of Thrones', 'New Era'),
-	(107, 'Who Moved My Cheese?', 'Simon & Schuster'),
-	(108, 'The Great Gatsby', 'HarperCollins'),
-	(109, 'The Martian', 'Penguin'),
-	(110, 'Inferno', 'New Era'),
-	(111, 'Beneath A Scarlet Sky', 'Simon & Schuster'),
-	(112, 'Green Eggs and Ham', 'HarperCollins'),
-	(113, 'Good to Great', 'Penguin'),
-	(114, 'The 7 Habits of Highly Effective People', 'New Era'),
-	(115, 'Steve Jobs', 'Simon & Schuster'),
-	(116, 'American Sniper', 'HarperCollins'),
-	(117, '10X Rule', 'Penguin'),
-	(118, 'Battlefield Earth', 'New Era'),
-	(119, 'Jab, Jab, Jab, Right Hook', 'Simon & Schuster')
+	--Required 20 books
+	('Fifty Shades of Grey', 'HarperCollins'),
+	('The Hunger Games', 'Penguin'),
+	('Gone Girl', 'New Era'),
+	('The Fault in Our Stars', 'Simon & Schuster'),
+	('Divergent', 'HarperCollins'),
+	('Harry Potter', 'Penguin'),
+	('A Game of Thrones', 'New Era'),
+	('Who Moved My Cheese?', 'Simon & Schuster'),
+	('The Great Gatsby', 'HarperCollins'),
+	('The Martian', 'Penguin'),
+	('The Lost Tribe', 'New Era'),
+	('Beneath A Scarlet Sky', 'Simon & Schuster'),
+	('Green Eggs and Ham', 'HarperCollins'),
+	('The Shining', 'Penguin'), --Required Stephen King
+	('The Green Mile', 'New Era'), --Required Stephen King
+	('Steve Jobs', 'Simon & Schuster'),
+	('American Sniper', 'HarperCollins'),
+	('10X Rule', 'Penguin'),
+	('Battlefield Earth', 'New Era'),
+	('Jab, Jab, Jab, Right Hook', 'Simon & Schuster')
 ;
 SELECT * FROM books;
 
+
+INSERT INTO book_authors (BooksID, AuthorName)
+VALUES
+	--Required 10 authors
+	(100, 'E.L. James'),
+	(101, 'Suzanne Collins'),
+	(102, 'Gillian Flynn'),
+	(103, 'John Green'),
+	(104, 'Veronica Roth'),
+	(105, 'J.K. Rowling'),
+	(106, 'George R. R. Martin'),
+	(107, 'Spencer Johnson'),
+	(108, 'F. Scott Fitzgerald'),
+	(109, 'Andy Weir'),
+	(110, 'Matthew Caldwell'),
+	(111, 'Mark T. Sullivan'),
+	(112, 'Dr. Seuss'),
+	(113, 'Stephen King'),
+	(114, 'Stephen King'),
+	(115, 'Walter Isaacson'),
+	(116, 'Chris Kyle, Scott McEwen, Jim DeFelice'),
+	(117, 'Grant Cardone'),
+	(118, 'L. Ron Hubbard'),
+	(119, 'Gary Vaynerchuk')
+;
+SELECT * FROM book_authors;
+
+
+INSERT INTO book_copies (BooksID, BranchID, Number_Of_Copies)
+VALUES
+	--Each branch has at least 10 books
+	--Each branch has at least 2 copies of those 10 books
+	--Branches are numbered 1-4 for Sharpstown, Central, Baker, and Dulles respectively.
+	(100, 1, 2);
+;

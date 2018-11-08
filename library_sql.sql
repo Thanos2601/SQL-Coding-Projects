@@ -41,7 +41,7 @@ SELECT * FROM book_authors;
 CREATE TABLE book_copies(
 	BooksID INT FOREIGN KEY REFERENCES books(BooksID),
 	BranchID INT FOREIGN KEY REFERENCES library_branch(BranchID),
-	Number_Of_Copies INT NOT NULL
+	Number_Of_Copies INT NULL
 )
 SELECT * FROM book_copies;
 
@@ -59,17 +59,17 @@ CREATE TABLE book_loans (
 	BooksID INT FOREIGN KEY REFERENCES books(BooksID),
 	BranchID INT FOREIGN KEY REFERENCES library_branch(BranchID),
 	CardNo INT FOREIGN KEY REFERENCES borrower(CardNo),
-	DateOut DATE NOT NULL,
+	DateOut DATE NULL,
 	DateDue DATE NOT NULL
 )
 SELECT * FROM book_loans;
+
 
 /*
 ================
 INSERTING DATA
 ================
 */
-
 INSERT INTO library_branch (BranchName, Address)
 VALUES
 	--Required 4 branches
@@ -178,18 +178,26 @@ VALUES
 	(106, 2, 5),
 	(106, 3, 5),
 	(106, 4, 5), --7th book
+	(110, 1, 5),
+	(110, 2, 5),
+	(110, 3, 5),
+	(110, 4, 5), --8th book
 	(111, 1, 5),
 	(111, 2, 5),
 	(111, 3, 5),
-	(111, 4, 5), --8th book
+	(111, 4, 5), --9th book
+	(113, 1, 5),
+	(113, 2, 5),
+	(113, 3, 5),
+	(113, 4, 5), --10th book
 	(114, 1, 5),
 	(114, 2, 5),
 	(114, 3, 5),
-	(114, 4, 5), --9th book
+	(114, 4, 5), --11th book
 	(115, 1, 5),
 	(115, 2, 5),
 	(115, 3, 5),
-	(115, 4, 5) --10th book
+	(115, 4, 5) --12th book
 ;
 SELECT * FROM book_copies;
 
@@ -249,20 +257,138 @@ VALUES
 	(117, 4, 1001, '2018-06-20', '2018-07-20'),
 	(118, 4, 1001, '2018-06-20', '2018-07-20'), --8 books to Johnny
 
-	(111, 1, 1005, '2018-06-21', '2018-07-21'),
-	(113, 1, 1005, '2018-06-21', '2018-07-21'),
-	(114, 1, 1005, '2018-06-21', '2018-07-21'),
-	(115, 1, 1005, '2018-06-21', '2018-07-21'),
-	(116, 1, 1005, '2018-06-21', '2018-07-21'),
-	(117, 1, 1005, '2018-06-21', '2018-07-21'),
-	(118, 1, 1005, '2018-06-21', '2018-07-21'),
-	(119, 1, 1005, '2018-06-21', '2018-07-21') --8 books to Ana Sofia
+	(111, 1, 1005, '2018-06-21', '2018/11/08'),
+	(113, 1, 1005, '2018-06-21', '2018-11-08'),
+	(114, 1, 1005, '2018-06-21', '2018-11-08'),
+	(115, 1, 1005, '2018-06-21', '2018-11-08'),
+	(116, 1, 1005, '2018-06-21', '2018-11-08'),
+	(117, 1, 1005, '2018-06-21', '2018-11-08'),
+	(118, 1, 1005, '2018-06-21', '2018-11-08'),
+	(119, 1, 1005, '2018-06-21', '2018-11-08') --8 books to Ana Sofia
 ;
 SELECT * FROM book_loans;
 
-
+GO
 /*
 ================
 Creating Procedures
 ================
 */
+--Procedure 1
+--How many copies of the book titled "The Lost Tribe" are owned by the library branch whose name is "Sharpstown"?
+CREATE PROCEDURE dbo.uspselectLostTribeFromSharpstown
+AS
+SELECT books.Title, library_branch.BranchName
+FROM books
+JOIN book_copies ON book_copies.BooksID = books.BooksID
+JOIN library_branch ON library_branch.BranchID = book_copies.BranchID
+WHERE books.Title = 'The Lost Tribe'
+AND library_branch.BranchName = 'Sharpstown'
+GO
+
+EXEC [dbo].[uspselectLostTribeFromSharpstown];
+GO
+
+
+--Procedure 2
+--How many copies of the book titled "The Lost Tribe" are owned by each library branch?
+CREATE PROCEDURE dbo.uspselectLostTribeFromAllBranches @branchName NVARCHAR(20) = NULL
+AS
+SELECT books.Title, library_branch.BranchName
+FROM books
+JOIN book_copies ON book_copies.BooksID = books.BooksID
+JOIN library_branch ON library_branch.BranchID = book_copies.BranchID
+WHERE books.Title = 'The Lost Tribe'
+AND library_branch.BranchName LIKE '%' + ISNULL(@branchName,BranchName) + '%'
+GO
+
+EXEC [dbo].[uspselectLostTribeFromAllBranches];
+GO
+
+
+--Procedure 3
+/*
+=============
+HELP
+=============
+*/
+--Retrieve the names of all borrowers who do not have any books checked out.
+CREATE PROCEDURE dbo.uspselectBorrowersNoBooks
+AS
+SELECT borrower.Name, library_branch.BranchName, book_copies.Number_Of_Copies
+FROM borrower
+JOIN book_loans ON book_loans.CardNo = borrower.CardNo
+JOIN book_copies ON book_copies.BranchID = book_loans.BranchID
+JOIN library_branch ON library_branch.BranchID = book_loans.BranchID
+WHERE book_copies.Number_Of_Copies = NULL
+GO
+
+EXEC [dbo].[uspselectBorrowersNoBooks];
+GO
+
+
+--Procedure 4
+--For each book that is loaned out from the "Sharpstown" branch and whose DueDate is today,
+--retrieve the book title, the borrower's name, and the borrower's address.
+CREATE PROCEDURE dbo.uspSelectBorrowerDataSharpstown
+AS
+SELECT library_branch.BranchName, book_loans.DateDue, books.Title, borrower.Name, borrower.Address
+FROM library_branch
+JOIN book_loans ON book_loans.BranchID = library_branch.BranchID
+JOIN books ON books.BooksID = book_loans.BooksID
+JOIN borrower ON borrower.CardNo = book_loans.CardNo
+WHERE book_loans.DateDue = '2018/11/08'
+GO
+
+EXEC [dbo].[uspSelectBorrowerDataSharpstown]
+GO
+
+
+--Procedure 5
+--For each library branch, retrieve the branch name and the total number of books loaned out from that branch.
+CREATE PROCEDURE dbo.uspSelectLoanedBooks
+AS
+SELECT library_branch.BranchName, books.Title
+FROM library_branch
+JOIN book_loans ON book_loans.BranchID = library_branch.BranchID
+JOIN books ON books.BooksID = book_loans.BooksID
+WHERE book_loans.DateDue = (DateDue)
+GO
+
+EXEC [dbo].[uspSelectLoanedBooks]
+GO
+
+--Procedure 6
+/*
+=============
+HELP
+=============
+*/
+--Retrieve the names, addresses, and the number of books checked out for all borrowers
+--who have more than five books checked out.
+CREATE PROCEDURE dbo.uspSelectBorrowersBeyond5
+AS
+SELECT borrower.Name, borrower.Address, book_loans.BooksID
+FROM borrower
+JOIN book_loans ON book_loans.CardNo = borrower.CardNo
+WHERE
+GO
+
+EXEC
+GO
+
+--Procedure 7
+--For each book authored (or co-authored) by "Stephen King", retrieve the title and
+--the number of copies owned by the library branch whose name is "Central".
+CREATE PROCEDURE dbo.uspStephenKingCentral
+AS
+SELECT books.Title, book_authors.AuthorName, book_copies.Number_Of_Copies, library_branch.BranchName
+FROM books
+JOIN book_copies ON book_copies.BooksID = books.BooksID
+JOIN library_branch ON library_branch.BranchID = book_copies.BranchID
+JOIN book_authors ON book_authors.BooksID = books.BooksID
+WHERE book_authors.AuthorName = 'Stephen King'
+GO
+
+EXEC [dbo].[uspStephenKingCentral]
+GO

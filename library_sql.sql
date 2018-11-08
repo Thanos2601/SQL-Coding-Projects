@@ -58,12 +58,11 @@ SELECT * FROM borrower;
 CREATE TABLE book_loans (
 	BooksID INT FOREIGN KEY REFERENCES books(BooksID),
 	BranchID INT FOREIGN KEY REFERENCES library_branch(BranchID),
-	CardNo INT FOREIGN KEY REFERENCES borrower(CardNo),
+	CardNo INT FOREIGN KEY REFERENCES borrower(CardNo) NULL,
 	DateOut DATE NULL,
-	DateDue DATE NOT NULL
+	DateDue DATE NULL
 )
 SELECT * FROM book_loans;
-
 
 /*
 ================
@@ -205,6 +204,7 @@ SELECT * FROM book_copies;
 INSERT INTO borrower (CardNo, Name, Address, Phone)
 VALUES
 	--There are at least 8 borrowers in the BORROWER table
+	(1008, 'James Blow', '123 Main St., Portland, OR', '503-555-1234'),
 	(1000, 'Joe Blow', '123 Main St., Portland, OR', '503-555-1234'),
 	(1001, 'Johnny Anybody', '234 Park Ave., San Francisco, CA', '415-555-2345'),
 	(1002, 'Dave Arbuckle', '345 Broadway Blvd., Hollywood, CA', '818-555-3456'),
@@ -264,9 +264,12 @@ VALUES
 	(116, 1, 1005, '2018-06-21', '2018-11-08'),
 	(117, 1, 1005, '2018-06-21', '2018-11-08'),
 	(118, 1, 1005, '2018-06-21', '2018-11-08'),
-	(119, 1, 1005, '2018-06-21', '2018-11-08') --8 books to Ana Sofia
+	(119, 1, 1005, '2018-06-21', '2018-11-08'), --8 books to Ana Sofia
+
+	(102, 1, 1002, '2018-07-21', '2018-08-21') --1 book to Dave Arbuckle
 ;
 SELECT * FROM book_loans;
+
 
 GO
 /*
@@ -278,7 +281,7 @@ Creating Procedures
 --How many copies of the book titled "The Lost Tribe" are owned by the library branch whose name is "Sharpstown"?
 CREATE PROCEDURE dbo.uspselectLostTribeFromSharpstown
 AS
-SELECT books.Title, library_branch.BranchName
+SELECT book_copies.Number_Of_Copies, books.Title, library_branch.BranchName
 FROM books
 JOIN book_copies ON book_copies.BooksID = books.BooksID
 JOIN library_branch ON library_branch.BranchID = book_copies.BranchID
@@ -294,12 +297,11 @@ GO
 --How many copies of the book titled "The Lost Tribe" are owned by each library branch?
 CREATE PROCEDURE dbo.uspselectLostTribeFromAllBranches @branchName NVARCHAR(20) = NULL
 AS
-SELECT books.Title, library_branch.BranchName
+SELECT book_copies.Number_Of_Copies, books.Title, library_branch.BranchName
 FROM books
 JOIN book_copies ON book_copies.BooksID = books.BooksID
 JOIN library_branch ON library_branch.BranchID = book_copies.BranchID
 WHERE books.Title = 'The Lost Tribe'
-AND library_branch.BranchName LIKE '%' + ISNULL(@branchName,BranchName) + '%'
 GO
 
 EXEC [dbo].[uspselectLostTribeFromAllBranches];
@@ -307,20 +309,13 @@ GO
 
 
 --Procedure 3
-/*
-=============
-HELP
-=============
-*/
 --Retrieve the names of all borrowers who do not have any books checked out.
 CREATE PROCEDURE dbo.uspselectBorrowersNoBooks
 AS
-SELECT borrower.Name, library_branch.BranchName, book_copies.Number_Of_Copies
+SELECT borrower.Name
 FROM borrower
-JOIN book_loans ON book_loans.CardNo = borrower.CardNo
-JOIN book_copies ON book_copies.BranchID = book_loans.BranchID
-JOIN library_branch ON library_branch.BranchID = book_loans.BranchID
-WHERE book_copies.Number_Of_Copies = NULL
+FULL OUTER JOIN book_loans ON book_loans.CardNo = borrower.CardNo
+WHERE book_loans.CardNo IS NULL
 GO
 
 EXEC [dbo].[uspselectBorrowersNoBooks];
@@ -338,6 +333,7 @@ JOIN book_loans ON book_loans.BranchID = library_branch.BranchID
 JOIN books ON books.BooksID = book_loans.BooksID
 JOIN borrower ON borrower.CardNo = book_loans.CardNo
 WHERE book_loans.DateDue = '2018/11/08'
+AND library_branch.BranchName = 'Sharpstown'
 GO
 
 EXEC [dbo].[uspSelectBorrowerDataSharpstown]
@@ -345,42 +341,39 @@ GO
 
 
 --Procedure 5
---For each library branch, retrieve the branch name and the total number of books loaned out from that branch.
+--For each library branch, retrieve the branch name and
+--the total number of books loaned out from that branch.
 CREATE PROCEDURE dbo.uspSelectLoanedBooks
 AS
-SELECT library_branch.BranchName, books.Title
+SELECT COUNT(*) AS 'Books Loaned', library_branch.BranchName
 FROM library_branch
 JOIN book_loans ON book_loans.BranchID = library_branch.BranchID
-JOIN books ON books.BooksID = book_loans.BooksID
 WHERE book_loans.DateDue = (DateDue)
+GROUP BY library_branch.BranchName
 GO
 
 EXEC [dbo].[uspSelectLoanedBooks]
 GO
 
 --Procedure 6
-/*
-=============
-HELP
-=============
-*/
 --Retrieve the names, addresses, and the number of books checked out for all borrowers
 --who have more than five books checked out.
 CREATE PROCEDURE dbo.uspSelectBorrowersBeyond5
 AS
-SELECT borrower.Name, borrower.Address, book_loans.BooksID
+SELECT COUNT(book_loans.BooksID) AS 'BooksLoaned', borrower.Name, borrower.Address
 FROM borrower
 JOIN book_loans ON book_loans.CardNo = borrower.CardNo
-WHERE
+GROUP BY borrower.Name, borrower.Address
+HAVING COUNT(*)>5
 GO
 
-EXEC
+EXEC [dbo].[uspSelectBorrowersBeyond5]
 GO
 
 --Procedure 7
 --For each book authored (or co-authored) by "Stephen King", retrieve the title and
 --the number of copies owned by the library branch whose name is "Central".
-CREATE PROCEDURE dbo.uspStephenKingCentral
+ALTER PROCEDURE dbo.uspStephenKingCentral
 AS
 SELECT books.Title, book_authors.AuthorName, book_copies.Number_Of_Copies, library_branch.BranchName
 FROM books
@@ -388,6 +381,7 @@ JOIN book_copies ON book_copies.BooksID = books.BooksID
 JOIN library_branch ON library_branch.BranchID = book_copies.BranchID
 JOIN book_authors ON book_authors.BooksID = books.BooksID
 WHERE book_authors.AuthorName = 'Stephen King'
+AND library_branch.BranchName = 'Central'
 GO
 
 EXEC [dbo].[uspStephenKingCentral]
